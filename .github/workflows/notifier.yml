@@ -1,0 +1,48 @@
+# 워크플로우 이름
+name: Gachon Discord Notifier
+
+# 언제 실행할지 설정
+on:
+  schedule:
+    # UTC 시간 기준으로 30분마다 실행
+    # (한국 시간으로는 매시 00분, 30분쯤에 실행됩니다)
+    - cron: '*/30 * * * *'
+  
+  # "Actions" 탭에서 수동으로 실행할 수 있는 버튼 추가
+  workflow_dispatch:
+
+# 실행할 작업 정의
+jobs:
+  check-and-notify:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. 내 코드를 서버로 가져오기
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. 마지막 글 번호가 저장된 파일을 캐시에서 불러오기
+      # (이게 없으면 실행할 때마다 새 글이라고 알림이 옵니다)
+      - name: Restore last post ID cache
+        uses: actions/cache@v4
+        with:
+          path: last_post_id.txt
+          key: ${{ runner.os }}-last-post-id
+
+      # 3. 파이썬 설치하기
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 4. 필요한 라이브러리 설치하기 (requirements.txt)
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 5. 파이썬 스크립트 실행하기
+      - name: Run Python script
+        env:
+          # 3단계에서 저장한 비밀키를 여기서 사용
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        run: python gachon_notifier.py
